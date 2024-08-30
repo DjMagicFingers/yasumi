@@ -7,6 +7,7 @@ use Yasumi\Provider\AbstractProvider;
 use Yasumi\Exception\InvalidDateException;
 use DateTime;
 use DateTimeZone;
+use IntlCalendar;
 
 /**
  * Provider for all holidays in Israel.
@@ -31,7 +32,7 @@ class Israel extends AbstractProvider
         $this->addNewYear();
         $this->addIndependenceDay();
 
-        // Add Hebrew calendar holidays (example: Rosh Hashanah)
+        // Add Hebrew calendar holidays
         $this->addRoshHashanah();
         $this->addYomKippur();
         $this->addPassover();
@@ -59,10 +60,8 @@ class Israel extends AbstractProvider
     private function addIndependenceDay(): void
     {
         // Independence Day (Yom Ha'atzmaut) is on the 5th of Iyar in the Hebrew calendar.
-        // This may require additional logic for conversion, depending on the year.
-
-        // Example date - needs to be replaced with Hebrew to Gregorian conversion logic.
-        $independenceDay = new DateTime("{$this->year}-04-15", new DateTimeZone($this->timezone));
+        $hebrewYear = $this->getHebrewYear();
+        $independenceDay = $this->convertHebrewToGregorian($hebrewYear, 8, 5); // 5th of Iyar
 
         $this->addHoliday(new Holiday(
             'independenceDay',
@@ -77,8 +76,8 @@ class Israel extends AbstractProvider
      */
     private function addRoshHashanah(): void
     {
-        // Example date - needs to be replaced with Hebrew to Gregorian conversion logic.
-        $roshHashanah = new DateTime("{$this->year}-09-15", new DateTimeZone($this->timezone));
+        $hebrewYear = $this->getHebrewYear();
+        $roshHashanah = $this->convertHebrewToGregorian($hebrewYear, 7, 1); // 1st of Tishrei
 
         $this->addHoliday(new Holiday(
             'roshHashanah',
@@ -89,5 +88,112 @@ class Israel extends AbstractProvider
     }
 
     /**
-     * Adds
+     * Adds Yom Kippur.
+     */
+    private function addYomKippur(): void
+    {
+        $hebrewYear = $this->getHebrewYear();
+        $yomKippur = $this->convertHebrewToGregorian($hebrewYear, 7, 10); // 10th of Tishrei
 
+        $this->addHoliday(new Holiday(
+            'yomKippur',
+            ['en' => 'Yom Kippur', 'he' => 'יום כיפור'],
+            $yomKippur,
+            $this->locale
+        ));
+    }
+
+    /**
+     * Adds Passover (Pesach).
+     */
+    private function addPassover(): void
+    {
+        $hebrewYear = $this->getHebrewYear();
+        $passover = $this->convertHebrewToGregorian($hebrewYear, 1, 15); // 15th of Nisan
+
+        $this->addHoliday(new Holiday(
+            'passover',
+            ['en' => 'Passover', 'he' => 'פסח'],
+            $passover,
+            $this->locale
+        ));
+    }
+
+    /**
+     * Adds Sukkot.
+     */
+    private function addSukkot(): void
+    {
+        $hebrewYear = $this->getHebrewYear();
+        $sukkot = $this->convertHebrewToGregorian($hebrewYear, 7, 15); // 15th of Tishrei
+
+        $this->addHoliday(new Holiday(
+            'sukkot',
+            ['en' => 'Sukkot', 'he' => 'סוכות'],
+            $sukkot,
+            $this->locale
+        ));
+    }
+
+    /**
+     * Adds Purim.
+     */
+    private function addPurim(): void
+    {
+        $hebrewYear = $this->getHebrewYear();
+        $purim = $this->convertHebrewToGregorian($hebrewYear, 12, 14); // 14th of Adar (or Adar II in a leap year)
+
+        $this->addHoliday(new Holiday(
+            'purim',
+            ['en' => 'Purim', 'he' => 'פורים'],
+            $purim,
+            $this->locale
+        ));
+    }
+
+    /**
+     * Adds Shavuot.
+     */
+    private function addShavuot(): void
+    {
+        $hebrewYear = $this->getHebrewYear();
+        $shavuot = $this->convertHebrewToGregorian($hebrewYear, 3, 6); // 6th of Sivan
+
+        $this->addHoliday(new Holiday(
+            'shavuot',
+            ['en' => 'Shavuot', 'he' => 'שבועות'],
+            $shavuot,
+            $this->locale
+        ));
+    }
+
+    /**
+     * Converts a Hebrew date to the Gregorian calendar.
+     *
+     * @param int $year Hebrew year
+     * @param int $month Hebrew month
+     * @param int $day Hebrew day
+     * @return DateTime Gregorian date corresponding to the Hebrew date
+     */
+    private function convertHebrewToGregorian(int $year, int $month, int $day): DateTime
+    {
+        $intlCalendar = IntlCalendar::createInstance('Asia/Jerusalem', 'hebrew');
+        $intlCalendar->set(IntlCalendar::FIELD_YEAR, $year);
+        $intlCalendar->set(IntlCalendar::FIELD_MONTH, $month - 1); // IntlCalendar months start from 0
+        $intlCalendar->set(IntlCalendar::FIELD_DAY_OF_MONTH, $day);
+
+        return DateTime::createFromImmutable($intlCalendar->toDateTime());
+    }
+
+    /**
+     * Gets the current Hebrew year for conversion purposes.
+     *
+     * @return int Hebrew year corresponding to the current Gregorian year
+     */
+    private function getHebrewYear(): int
+    {
+        $intlCalendar = IntlCalendar::createInstance('Asia/Jerusalem', 'hebrew');
+        $intlCalendar->set($this->year, 0, 1); // Set to the beginning of the Gregorian year
+        return $intlCalendar->get(IntlCalendar::FIELD_YEAR);
+    }
+}
